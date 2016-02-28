@@ -1,4 +1,4 @@
-# Through The Spring Demo-1
+# Through The Springs Demo-1
   This is a 3-D scene implemented by WebGL with JavaScript and Three.js
 # Implementation 
   1) A real-time realistic water plane
