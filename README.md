@@ -11,8 +11,14 @@
   
   5) Lights
   
+  6) Snow
+  
+  7) Tree models
+  
+  8) Rocks models
+  
 # Example 
   
   Run on Rawgti.com:
-  https://cdn.rawgit.com/ThroughTheSprings/Demo-1/master/FP_Through_The_Springs_demo1.html
+  https://cdn.rawgit.com/ThroughTheSprings/Demo-1/master/FP_Through_The_Springs_Demo1_Final.html
   
