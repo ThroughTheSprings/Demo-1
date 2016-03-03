@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Snow</title>
+		<script src="js/three.js"></script>
+		<script src="js/dat.gui.js"></script>
+	</head>
+	<body>
+		<script type="x-shader/x-vertex" id="snowVertexShader">
+			uniform float radiusX;
+			uniform float radiusZ;
+			uniform float size;
+			uniform float scale;
+			uniform float height;
+			uniform float elapsedTime;
+			uniform float speedH;
+			uniform float speedV;
+			void main() {
+				vec3 pos = position;
+				pos.x += cos((elapsedTime + position.z) * 0.25 * speedH) * radiusX;
+				pos.y = mod(pos.y - elapsedTime * speedV, height);
+				pos.z += sin((elapsedTime + position.x) * 0.25 * speedH) * radiusZ;
+				vec4 mvPosition = modelViewMatrix * vec4( pos, 1.0 );
+				gl_PointSize = size * ( scale / length( mvPosition.xyz ) );
+				gl_Position = projectionMatrix * mvPosition;
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="snowFragmentShader">
+			uniform vec3 color;
+			uniform float opacity;
+			// uniform sampler2D texture;
+			void main() {
+				// vec4 texColor = texture2D( texture, gl_PointCoord );
+				gl_FragColor = vec4(color, opacity);
+			}
+		</script>
+
+		<script>
+		var renderer,
+		scene,
+		camera,
+		cameraRadius = 100.0,
+		cameraTarget,
+		cameraX = 0,
+		cameraY = 0,
+		cameraZ = cameraRadius,
+		particleSystem,
+		particleSystemHeight = 100.0,
+		clock,
+		controls,
+		parameters,
+		// texture,
+		onParametersUpdate;
+
+		init();
+		animate();
+
+
+		function init() {
+
+			renderer = new THREE.WebGLRenderer();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor( new THREE.Color( 0x000000 ) );
+
+			scene = new THREE.Scene();
+
+			camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+			cameraTarget = new THREE.Vector3( 0, 0, 0 );
+
+			// texture = THREE.ImageUtils.loadTexture( 'images/snowflake.png' );
+
+			//number of flakes
+			var numParticles = 200,
+				width = 100,
+				height = particleSystemHeight,
+				depth = 100,
+				//Parameters for GUI
+				parameters = {
+					scale: 3.0,
+					speedH: 1.0,
+					speedV: 1.0
+				},
+				systemGeometry = new THREE.Geometry(),
+				//Controls what the flakes look like
+				systemMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+						color:  { type: 'c', value: new THREE.Color(0xFFFFFF) },
+						height: { type: 'f', value: particleSystemHeight},
+						elapsedTime: { type: 'f', value: 0 },
+						radiusX: { type: 'f', value: 3},
+						radiusZ: { type: 'f', value: 3},
+						size: { type: 'f', value: 100},
+						scale: { type: 'f', value: parameters.scale },
+						opacity: { type: 'f', value: 0.7},
+						// texture: { type: 't', value: texture },
+						speedH: { type: 'f', value: parameters.speedH },
+						speedV: { type: 'f', value: parameters.speedV }
+					},
+					vertexShader: document.getElementById( 'snowVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'snowFragmentShader' ).textContent,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthTest: false
+				});
+
+			//randomizes where particles are located
+			for(var i = 0; i < numParticles; i++) {
+				var vertex = new THREE.Vector3(rand(width), Math.random() * height, rand(depth));
+
+				systemGeometry.vertices.push(vertex);
+			}
+
+			//Adds all the particles to the particle system
+			particleSystem = new THREE.ParticleSystem(systemGeometry, systemMaterial);
+			particleSystem.position.y = -height/2;
+
+			//And then add particle system to be shown on the scene
+			scene.add(particleSystem);
+
+			clock = new THREE.Clock();
+
+			document.body.appendChild(renderer.domElement);
+
+			onParametersUpdate = function(v) {
+				systemMaterial.uniforms.scale.value = parameters.scale;
+				systemMaterial.uniforms.speedH.value = parameters.speedH;
+				systemMaterial.uniforms.speedV.value = parameters.speedV;
+			}
+
+			controls = new dat.GUI();
+			controls.close();
+
+			controls.add(parameters, 'scale', 1, 5).onChange(onParametersUpdate);
+			controls.add(parameters, 'speedH', 0.1, 2.5).onChange(onParametersUpdate);
+			controls.add(parameters, 'speedV', 0.1, 2.5).onChange(onParametersUpdate);
+
+		}
+
+		//helper to randomize numbers
+		function rand(num) {
+			return (num * (Math.random() - 0.5));
+		}
+
+		function animate() {
+
+			requestAnimationFrame(animate);
+
+			var delta = clock.getDelta();
+			var elapsedTime = clock.getElapsedTime();
+
+			particleSystem.material.uniforms.elapsedTime.value = elapsedTime * 10; //speeds up how fast the particles fall
+
+			camera.position.set(cameraX, cameraY, cameraZ);
+			camera.lookAt(cameraTarget);
+
+			renderer.clear();
+			renderer.render(scene, camera);
+
+		}
+		</script>
+	</body>
+</html>
