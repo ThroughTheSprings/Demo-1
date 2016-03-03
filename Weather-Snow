@@ -133,8 +133,8 @@
 			controls.close();
 
 			controls.add(parameters, 'scale', 1, 5).onChange(onParametersUpdate);
-			controls.add(parameters, 'speedH', 0.1, 2.5).onChange(onParametersUpdate);
-			controls.add(parameters, 'speedV', 0.1, 2.5).onChange(onParametersUpdate);
+			controls.add(parameters, 'speedH', 1, 2.5).onChange(onParametersUpdate);
+			controls.add(parameters, 'speedV', 1, 2.5).onChange(onParametersUpdate);
 
 		}
 
