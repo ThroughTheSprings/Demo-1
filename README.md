@@ -5,7 +5,7 @@
   
   2) 2 Stone-textured walls
 
-  3) A reflective cameric-textured foor
+  3) A reflective carmeic-textured floor
   
   4) A skybox 
   
