@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Weather</title>
+		<script src="js/three.js"></script>
+		<script src="js/dat.gui.js"></script>
+	</head>
+	<body>
+		<script type="x-shader/x-vertex" id="VertexShader">
+			uniform float radiusX;
+			uniform float radiusZ;
+			uniform float size;
+			uniform float scale;
+			uniform float height;
+			uniform float elapsedTime;
+			uniform float speedH;
+			uniform float speedV;
+			void main() {
+				vec3 pos = position;
+				pos.x += cos((elapsedTime + position.z) * 0.25 * speedH) * radiusX;
+				pos.y = mod(pos.y - elapsedTime * speedV, height);
+				pos.z += sin((elapsedTime + position.x) * 0.25 * speedH) * radiusZ;
+				vec4 mvPosition = modelViewMatrix * vec4( pos, 1.0 );
+				gl_PointSize = size * ( scale / length( mvPosition.xyz ) );
+				gl_Position = projectionMatrix * mvPosition;
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="FragmentShader">
+			uniform vec3 color;
+			uniform float opacity;
+			// uniform sampler2D texture;
+			void main() {
+				// vec4 texColor = texture2D( texture, gl_PointCoord );
+			  gl_FragColor = vec4(color, opacity);
+			}
+		</script>
+
+		<script>
+		var renderer,
+		scene,
+		camera,
+		cameraRadius = 100.0,
+		cameraTarget,
+		cameraX = 0,
+		cameraY = 0,
+		cameraZ = cameraRadius,
+		particleSystem,
+		particleSystemHeight = 100.0,
+		clock,
+		parameters,
+		// texture,
+		value,
+		systemMaterial,
+		guiControls,
+		onParametersUpdate;
+
+		loadScene();
+		loadParticles();
+		loadControls();
+		animate();
+
+			//set up camera, scene, renderer
+			function loadScene() {
+				scene = new THREE.Scene();
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				cameraTarget = new THREE.Vector3( 0, 0, 0 );
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor( new THREE.Color( 0x000000 ) );
+
+				document.body.appendChild(renderer.domElement);
+
+				clock = new THREE.Clock();
+			}
+
+			// texture = THREE.ImageUtils.loadTexture( 'images/snowflake1.png' );
+			function loadParticles() {
+			var numParticles = 200,
+				width = 100,
+				height = particleSystemHeight,
+				depth = 100,
+				systemGeometry = new THREE.Geometry();
+
+				//Controls what the particles look like
+				systemMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+								color:  { type: 'c', value: new THREE.Color(0x4d94ff) },
+								height: { type: 'f', value: particleSystemHeight},
+								elapsedTime: { type: 'f', value: 0 },
+								radiusX: { type: 'f', value: 0},
+								radiusZ: { type: 'f', value: 0},
+								size: { type: 'f', value: 100},
+								scale: { type: 'f', value: 3},
+								opacity: { type: 'f', value: 0.7},
+								// texture: { type: 't', value: texture },
+								speedH: { type: 'f', value: 3},
+								speedV: { type: 'f', value: 3}
+					},
+					vertexShader: document.getElementById( 'VertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'FragmentShader' ).textContent,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthTest: false
+				});
+
+			//randomizes where particles are located
+			for(var i = 0; i < numParticles; i++) {
+				var vertex = new THREE.Vector3(rand(width), Math.random() * height, rand(depth));
+
+				systemGeometry.vertices.push(vertex);
+			}
+
+			//Adds all the particles to the particle system
+			particleSystem = new THREE.ParticleSystem(systemGeometry, systemMaterial);
+			particleSystem.position.y = -height/2;
+
+			//And then add particle system to be shown on the scene
+			scene.add(particleSystem);
+		}
+
+		function loadControls() {
+			var controls = new dat.GUI();
+
+			guiControls = new function() {
+				this.material = "Rain";
+			};
+
+			//Dropdown GUI with three selections: Rain, Snow, and Sun
+			systemMaterial = controls.add(guiControls, 'material', [ "Rain", "Snow", "Sun"]).name('Weather').listen();
+			systemMaterial.onChange(function(value){updateWeather();});
+
+			controls.open();
+		}
+
+		//helper to randomize numbers
+		function rand(num) {
+			return (num * (Math.random() - 0.5));
+		}
+
+		//Updates the weather according to GUI control
+		function updateWeather() {
+			value = guiControls.material;
+			var newMaterial;
+
+			if (value == "Rain"){
+				newMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+								color:  { type: 'c', value: new THREE.Color(0x4d94ff) },
+								height: { type: 'f', value: particleSystemHeight},
+								elapsedTime: { type: 'f', value: 0 },
+								radiusX: { type: 'f', value: 0},
+								radiusZ: { type: 'f', value: 0},
+								size: { type: 'f', value: 100},
+								scale: { type: 'f', value: 3},
+								opacity: { type: 'f', value: 0.7},
+							  // texture: { type: 't', value: texture },
+								speedH: { type: 'f', value: 5},
+								speedV: { type: 'f', value: 5}
+					},
+					vertexShader: document.getElementById( 'VertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'FragmentShader' ).textContent,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthTest: false
+				});
+			}else if(value == "Snow"){
+				newMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+						color:  { type: 'c', value: new THREE.Color(0xFFFFFF) },
+						height: { type: 'f', value: particleSystemHeight},
+						elapsedTime: { type: 'f', value: 0 },
+						radiusX: { type: 'f', value: 3},
+						radiusZ: { type: 'f', value: 3},
+						size: { type: 'f', value: 100},
+						scale: { type: 'f', value: 3},
+						opacity: { type: 'f', value: 0.7},
+						// texture: { type: 't', value: texture },
+						speedH: { type: 'f', value: 1},
+						speedV: { type: 'f', value: 1}
+					},
+					vertexShader: document.getElementById( 'VertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'FragmentShader' ).textContent,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthTest: false
+				});
+			}else{ //value = "sun"
+				newMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+						color:  { type: 'c', value: new THREE.Color(0xFFFFFF) },
+						height: { type: 'f', value: particleSystemHeight},
+						elapsedTime: { type: 'f', value: 0 },
+						radiusX: { type: 'f', value: 0},
+						radiusZ: { type: 'f', value: 0},
+						size: { type: 'f', value: 100},
+						scale: { type: 'f', value: 0},
+						opacity: { type: 'f', value: 0},
+						speedH: { type: 'f', value: 0},
+						speedV: { type: 'f', value: 0}
+					},
+					vertexShader: document.getElementById( 'VertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'FragmentShader' ).textContent,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthTest: false
+				});
+			}
+
+			particleSystem.material = newMaterial;
+
+		}
+
+		//Applies the changes to the scenes and keeps it updated
+		function animate() {
+
+			requestAnimationFrame(animate);
+
+			updateWeather();
+
+			var delta = clock.getDelta();
+			var elapsedTime = clock.getElapsedTime();
+
+			particleSystem.material.uniforms.elapsedTime.value = elapsedTime * 10; //speeds up how fast the particles fall
+
+			camera.position.set(cameraX, cameraY, cameraZ);
+			camera.lookAt(cameraTarget);
+
+			renderer.clear();
+			renderer.render(scene, camera);
+
+		}
+
+		</script>
+	</body>
+</html>
