@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Fog</title>
+		<script src="js/three.js"></script>
+		<script src="js/dat.gui.js"></script>
+	</head>
+	<body>
+		<script type="x-shader/x-vertex" id="fogVertexShader">
+			uniform float radiusX;
+			uniform float radiusZ;
+			uniform float size;
+			uniform float scale;
+			uniform float height;
+			uniform float elapsedTime;
+			uniform float speed;
+			void main() {
+				vec3 pos = position;
+				pos.x += cos((elapsedTime + position.z) * 0.25) * radiusX;
+				pos.y = mod(pos.y - elapsedTime * speed, height);
+				pos.z += sin((elapsedTime + position.x) * 0.25) * radiusZ;
+				vec4 mvPosition = modelViewMatrix * vec4( pos, 1.0 );
+				gl_PointSize = size * ( scale / length( mvPosition.xyz ) );
+				gl_Position = projectionMatrix * mvPosition;
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fogFragmentShader">
+			uniform vec3 color;
+			uniform float opacity;
+			void main() {
+				gl_FragColor = vec4(color, opacity);
+			}
+		</script>
+
+		<script>
+		var renderer,
+		scene,
+		camera,
+		cameraRadius = 100.0,
+		cameraTarget,
+		cameraX = 0,
+		cameraY = 0,
+		cameraZ = cameraRadius,
+		particleSystem,
+		particleSystemHeight = 100.0,
+		clock,
+		controls,
+		parameters,
+		onParametersUpdate;
+
+		init();
+		animate();
+
+
+		function init() {
+
+			renderer = new THREE.WebGLRenderer();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor( new THREE.Color( 0x000000 ) );
+
+			scene = new THREE.Scene();
+
+			camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+			cameraTarget = new THREE.Vector3( 0, 0, 0 );
+
+			var numParticles = 200,
+				width = 65,
+				height = particleSystemHeight,
+				depth = 100,
+				parameters = {
+					scale: 3.0,
+					speed: 0.5
+				},
+				systemGeometry = new THREE.Geometry(),
+				systemMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+						color:  { type: 'c', value: new THREE.Color(0xd1d1e0) },
+						height: { type: 'f', value: particleSystemHeight},
+						elapsedTime: { type: 'f', value: 0 },
+						size: { type: 'f', value: 100},
+						scale: { type: 'f', value: parameters.scale },
+						opacity: { type: 'f', value: 0.7},
+						speed: { type: 'f', value: parameters.speed }
+					},
+					vertexShader: document.getElementById( 'fogVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'fogFragmentShader' ).textContent,
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					depthTest: false
+				});
+
+			for( var i = 0; i < numParticles; i++ ) {
+				var vertex = new THREE.Vector3(rand(width), Math.random() * height, rand(depth));
+
+				systemGeometry.vertices.push( vertex );
+			}
+
+			particleSystem = new THREE.ParticleSystem( systemGeometry, systemMaterial );
+			particleSystem.position.y = -height/2;
+
+			scene.add( particleSystem );
+
+			clock = new THREE.Clock();
+
+			document.body.appendChild( renderer.domElement );
+
+			onParametersUpdate = function( v ) {
+				systemMaterial.uniforms.scale.value = parameters.scale;
+				systemMaterial.uniforms.speed.value = parameters.speed;
+			}
+
+			controls = new dat.GUI();
+			controls.close();
+
+			controls.add(parameters, 'scale', 1, 5).onChange(onParametersUpdate);
+			controls.add(parameters, 'speed', 0.5, 1.5).onChange(onParametersUpdate);
+		}
+
+		function rand(num) {
+			return (num * (Math.random() - 0.5));
+		}
+
+		function animate() {
+
+			requestAnimationFrame( animate );
+
+			var delta = clock.getDelta();
+			var elapsedTime = clock.getElapsedTime();
+
+			particleSystem.material.uniforms.elapsedTime.value = elapsedTime * -30; //speeds up how fast the particles fly up
+
+			camera.position.set( cameraX, cameraY, cameraZ );
+			camera.lookAt( cameraTarget );
+
+			renderer.clear();
+			renderer.render( scene, camera );
+
+		}
+		</script>
+	</body>
+</html>
