@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Boat Model</title>
+  <script src="js/three.js"></script>
+	<script src="js/OrbitControls.js"></script>
+  <script type="text/javascript" src="js/dat.gui.js"></script>
+	<style>
+		body {margin:0; overflow: hidden }
+		canvas {width:100%; height:100%}
+	</style>
+</head>
+<body>
+	<div id="container"></div>
+	<script>
+
+  var scene, renderer, camera;
+	// var controls;
+  var cyl, base, wrapper; //shape variables
+	var guiControls;
+	init();
+
+  //Functions as the main and calls all the methods
+	function init() {
+		loadScene();
+		loadMeshes();
+		loadControls();
+		loadLights();
+		render();
+	}
+
+  //Creates a scene, camera, and renderer
+	function loadScene() {
+		scene = new THREE.Scene();
+
+		camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 1000);
+		camera.position.set(-15, 15, 25);
+		camera.lookAt(scene.position);
+
+		renderer = new THREE.WebGLRenderer( {antialias:true} );
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.setClearColor(0xdfdfdf);
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMapSoft = true;
+		document.getElementById("container").appendChild(renderer.domElement);
+
+		//Allows the camera to be rotated using the mouse
+		// controls = new THREE.OrbitControls(camera, renderer.domElement);
+		// controls.addEventListener('change', render);
+	}
+
+  //Creates GUI controls with rotation, translation, scaling, shearing, and/ or color depending on the shape
+	function loadControls() {
+		var datGUI = new dat.GUI();
+		guiControls = new function() {
+			this.translateX = 0;
+			this.translateZ = 0;
+		};
+
+    var f1 = datGUI.addFolder('Boat');
+		f1.add(guiControls, "translateX", -5, 10);
+		f1.add(guiControls, "translateZ", -5, 10);
+    f1.open();
+
+	}
+
+  //creates the shapes
+	function loadMeshes() {
+		//Creates a cylinder
+    var cylGeo = new THREE.CylinderGeometry(0.3, 0.3, 2, 8);
+    var cylMat = new THREE.MeshPhongMaterial( {color:0x80bfff} );
+    cyl = new THREE.Mesh(cylGeo, cylMat);
+    cyl.position.set(-12, 4, -3);
+    cyl.castShadow = true;
+    cyl.receiveShadow = true;
+
+		//Creates a base for the boat
+    var baseGeo = new THREE.CylinderGeometry(1, 3, 2, 4);
+    var baseMat = new THREE.MeshPhongMaterial( {color:0x331a00} );
+    base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.set(-12, 2, -3);
+		base.rotation.x = Math.PI; //flip upside down
+		base.rotation.y = -0.3;
+    base.castShadow = true;
+    base.receiveShadow = true;
+
+		//Creates a triangle
+		PrismGeometry = function (vertices, height) {
+
+    var Shape = new THREE.Shape();
+
+    ( function f(ctx) {
+
+        ctx.moveTo(vertices[0].x, vertices[0].y);
+        for (var i=1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x, vertices[i].y);
+        }
+        ctx.lineTo(vertices[0].x, vertices[0].y);
+
+    } )(Shape);
+
+    var settings = { };
+    settings.amount = height;
+    settings.bevelEnabled = false;
+    THREE.ExtrudeGeometry.call(this, Shape, settings);
+
+		};
+
+		PrismGeometry.prototype = Object.create(THREE.ExtrudeGeometry.prototype);
+
+		var A = new THREE.Vector2(0, -1);
+		var B = new THREE.Vector2(-3, 2);
+		var C = new THREE.Vector2(3, 2);
+
+		var height = 2;
+		var triGeometry = new PrismGeometry([ A, B, C ], height);
+
+		var triMaterial = new THREE.MeshPhongMaterial({color: 0xffffff, specular: 0x00ffff, shininess: 20});
+
+		var tri = new THREE.Mesh(triGeometry, triMaterial);
+		tri.rotation.y = -0.5;
+		tri.rotation.z = -0.8;
+		tri.position.set(-12, 5, -4);
+
+		//Adds cylinder,base, and triangle into a group to create a boat
+		wrapper = new THREE.Object3D();
+		wrapper.add(cyl);
+		wrapper.add(base);
+		wrapper.add(tri);
+
+		// to reposition boat
+		// wrapper.position.set(0, 0, 0);
+		wrapper.rotation.y = 0.4;
+
+		//Creates a plane
+		var planeGeometry = new THREE.PlaneGeometry(70, 70, 70);
+		planeGeometry.rotateX(- Math.PI / 2);
+		var planeMaterial = new THREE.MeshPhongMaterial();
+		plane = new THREE.Mesh(planeGeometry, planeMaterial);
+		plane.receiveShadow = true;
+
+		//Creates a grid
+		var grid = new THREE.GridHelper(30, 2);
+		grid.setColors(0x991300, 0x404040);
+
+		//Adds shapes to the scene
+    scene.add(wrapper);
+		scene.add(grid);
+		scene.add(plane);
+	}
+
+	function loadLights() {
+		var ambient = new THREE.AmbientLight(0xbbbbbb);
+		var light = new THREE.SpotLight(0x5555555);
+		light.castShadow = true;
+		light.shadowCameraNear = 8;
+		light.shadowCameraFar = 400;
+		light.shadowDarkness = 1;
+		light.shadowMapWidth = 2048;
+		light.shadowMapHeight = 2048;
+		light.position.set(8, 15, 15);
+
+		scene.add(ambient);
+		scene.add(light);
+	}
+
+  //Allows the boat to be able to rotate and translate depending on user input
+  function updateboat() {
+		wrapper.position.x = guiControls.translateX;
+		wrapper.position.z = guiControls.translateZ;
+  }
+
+	//Applies the transformations and keeps the shapes updated
+	function render() {
+		requestAnimationFrame(render);
+    updateboat();
+	  // controls.update();
+		renderer.render(scene, camera);
+	}
+
+  //Allows the window to be resized while still fitting everything in the screen
+	window.addEventListener("resize", function() {
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		camera.aspect = window.innerWidth/window.innerHeight;
+		camera.updateProjectionMatrix();
+	});
+
+	</script>
+</body>
+</html>
